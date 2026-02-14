@@ -1,5 +1,6 @@
 use crate::{
     chunk::{Chunk, OpCode},
+    compiler::Compiler,
     debug,
     value::Value,
 };
@@ -10,8 +11,7 @@ pub struct VM {
     stack: Vec<Value>,
 }
 
-pub enum InterpretResult {
-    Ok,
+pub enum InterpretError {
     CompileError,
     RuntimeError,
 }
@@ -25,10 +25,10 @@ impl VM {
         }
     }
 
-    pub fn interpret(&mut self, chunk: Chunk) -> InterpretResult {
-        self.chunk = chunk;
-        self.ip = 0;
-        self.run()
+    pub fn interpret(&mut self, source: String) -> Result<(), InterpretError> {
+        let mut compiler = Compiler::new(source);
+        compiler.compile();
+        Ok(())
     }
 
     fn pop_stack(&mut self) -> Value {
@@ -41,7 +41,7 @@ impl VM {
         self.stack.push(value);
     }
 
-    pub fn run(&mut self) -> InterpretResult {
+    pub fn run(&mut self) -> Result<(), InterpretError> {
         fn read_byte(vm: &mut VM) -> u8 {
             let instruction = vm.chunk.get_code(vm.ip);
             vm.ip += 1;
@@ -72,7 +72,7 @@ impl VM {
             match instruction {
                 OpCode::Return => {
                     println!("{}", self.pop_stack());
-                    return InterpretResult::Ok;
+                    return Ok(());
                 }
                 OpCode::Constant => {
                     let constant = read_constant(self);

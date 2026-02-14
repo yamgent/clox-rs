@@ -1,38 +1,77 @@
 mod chunk;
+mod compiler;
 mod debug;
+mod scanner;
 mod value;
 mod vm;
 
-use crate::{
-    chunk::{Chunk, OpCode},
-    vm::VM,
+use std::{
+    env, fs,
+    io::{self, Write},
+    process,
 };
 
+use crate::vm::{InterpretError, VM};
+
 fn main() {
+    let args = env::args().into_iter().collect::<Vec<_>>();
+
+    if args.len() == 1 {
+        repl();
+    } else if args.len() == 2 {
+        run_file(args[1].clone());
+    } else {
+        eprintln!("Usage: clox [path]");
+        process::exit(64);
+    }
+}
+
+fn repl() {
     let mut vm = VM::new();
 
-    let mut chunk = Chunk::new();
+    loop {
+        print!("> ");
+        io::stdout().flush().unwrap_or_else(|_| {
+            panic!("cannot write to stdout");
+        });
 
-    let constant = chunk.constants_mut().add(1.2);
-    chunk.write(OpCode::Constant as u8, 123);
-    chunk.write(constant as u8, 123);
+        let mut buffer = String::new();
 
-    let constant = chunk.constants_mut().add(3.4);
-    chunk.write(OpCode::Constant as u8, 123);
-    chunk.write(constant as u8, 123);
+        if let Ok(total_bytes) = io::stdin().read_line(&mut buffer) {
+            if total_bytes == 0 {
+                // Ctrl+D will produce 0 bytes (even a blank line is one character due to \n)
+                println!();
+                break;
+            }
 
-    chunk.write(OpCode::Add as u8, 123);
+            // TODO: do we to handle the result here?
+            let _ = vm.interpret(buffer);
+        } else {
+            // EOF
+            break;
+        }
+    }
+}
 
-    let constant = chunk.constants_mut().add(5.6);
-    chunk.write(OpCode::Constant as u8, 123);
-    chunk.write(constant as u8, 123);
+fn run_file<S: AsRef<str>>(path: S) {
+    let mut vm = VM::new();
 
-    chunk.write(OpCode::Divide as u8, 123);
-    chunk.write(OpCode::Negate as u8, 123);
+    let source = match fs::read_to_string(path.as_ref()) {
+        Ok(content) => content,
+        Err(_) => {
+            eprintln!("Could not read file {}", path.as_ref());
+            process::exit(74);
+        }
+    };
 
-    chunk.write(OpCode::Return as u8, 123);
-
-    debug::disassemble_chunk(&chunk, "test chunk");
-
-    vm.interpret(chunk);
+    if let Err(error) = vm.interpret(source) {
+        match error {
+            InterpretError::CompileError => {
+                process::exit(65);
+            }
+            InterpretError::RuntimeError => {
+                process::exit(70);
+            }
+        }
+    }
 }
