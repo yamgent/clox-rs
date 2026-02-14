@@ -5,7 +5,7 @@ pub struct Scanner {
     line: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TokenKind {
     // single character token
     LeftParen,
@@ -318,5 +318,135 @@ impl Scanner {
             self.advance();
             self.make_token(TokenKind::String)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scan() {
+        {
+            let mut scanner = Scanner::new("(){},.-+;/*".to_string());
+            assert_eq!(scanner.scan_token().kind, TokenKind::LeftParen);
+            assert_eq!(scanner.scan_token().kind, TokenKind::RightParen);
+            assert_eq!(scanner.scan_token().kind, TokenKind::LeftBrace);
+            assert_eq!(scanner.scan_token().kind, TokenKind::RightBrace);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Comma);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Dot);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Minus);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Plus);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Semicolon);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Slash);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Star);
+            assert_eq!(scanner.scan_token().kind, TokenKind::EOF);
+        }
+
+        {
+            let mut scanner = Scanner::new("! != = == > >= < <=".to_string());
+            assert_eq!(scanner.scan_token().kind, TokenKind::Bang);
+            assert_eq!(scanner.scan_token().kind, TokenKind::BangEqual);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Equal);
+            assert_eq!(scanner.scan_token().kind, TokenKind::EqualEqual);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Greater);
+            assert_eq!(scanner.scan_token().kind, TokenKind::GreaterEqual);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Less);
+            assert_eq!(scanner.scan_token().kind, TokenKind::LessEqual);
+        }
+
+        {
+            let mut scanner = Scanner::new("abc".to_string());
+            let token = scanner.scan_token();
+            assert_eq!(token.kind, TokenKind::Identifier);
+            assert_eq!(token.lexeme, "abc");
+        }
+
+        {
+            let mut scanner = Scanner::new(r#""Quick brown fox\n over lazy dog""#.to_string());
+            let token = scanner.scan_token();
+            assert_eq!(token.kind, TokenKind::String);
+            assert_eq!(token.lexeme, r#""Quick brown fox\n over lazy dog""#);
+        }
+
+        {
+            let mut scanner = Scanner::new("1.3".to_string());
+            let token = scanner.scan_token();
+            assert_eq!(token.kind, TokenKind::Number);
+            assert_eq!(token.lexeme, "1.3");
+        }
+
+        {
+            let mut scanner = Scanner::new(
+                "and class else false for fun if nil or print return super this true var while"
+                    .to_string(),
+            );
+            assert_eq!(scanner.scan_token().kind, TokenKind::And);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Class);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Else);
+            assert_eq!(scanner.scan_token().kind, TokenKind::False);
+            assert_eq!(scanner.scan_token().kind, TokenKind::For);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Fun);
+            assert_eq!(scanner.scan_token().kind, TokenKind::If);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Nil);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Or);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Print);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Return);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Super);
+            assert_eq!(scanner.scan_token().kind, TokenKind::This);
+            assert_eq!(scanner.scan_token().kind, TokenKind::True);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Var);
+            assert_eq!(scanner.scan_token().kind, TokenKind::While);
+            assert_eq!(scanner.scan_token().kind, TokenKind::EOF);
+        }
+
+        {
+            let mut scanner = Scanner::new("~".to_string());
+            let token = scanner.scan_token();
+            assert_eq!(token.kind, TokenKind::Error);
+        }
+    }
+
+    #[test]
+    fn test_whitespace() {
+        {
+            let mut scanner = Scanner::new(
+                r#"
+// this should be ignored
+fun hi() {
+    // return!
+    return; 
+}
+"#
+                .to_string(),
+            );
+            assert_eq!(scanner.scan_token().kind, TokenKind::Fun);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Identifier);
+            assert_eq!(scanner.scan_token().kind, TokenKind::LeftParen);
+            assert_eq!(scanner.scan_token().kind, TokenKind::RightParen);
+            assert_eq!(scanner.scan_token().kind, TokenKind::LeftBrace);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Return);
+            assert_eq!(scanner.scan_token().kind, TokenKind::Semicolon);
+            assert_eq!(scanner.scan_token().kind, TokenKind::RightBrace);
+            assert_eq!(scanner.scan_token().kind, TokenKind::EOF);
+        }
+    }
+
+    #[test]
+    fn test_line() {
+        let mut scanner = Scanner::new(
+            r#"var
+and or
+this
+;
+"#
+            .to_string(),
+        );
+        assert_eq!(scanner.scan_token().line, 1); // var
+        assert_eq!(scanner.scan_token().line, 2); // and
+        assert_eq!(scanner.scan_token().line, 2); // or
+        assert_eq!(scanner.scan_token().line, 3); // this
+        assert_eq!(scanner.scan_token().line, 4); // ;
+        assert_eq!(scanner.scan_token().line, 5); // EOF
     }
 }
