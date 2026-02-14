@@ -1,5 +1,12 @@
 use crate::chunk::{Chunk, OpCode};
 
+pub fn is_debug_trace_execution_enabled() -> bool {
+    match std::env::var("DEBUG_TRACE_EXECUTION") {
+        Ok(value) => value == "1",
+        Err(_) => false,
+    }
+}
+
 pub fn disassemble_chunk<S: AsRef<str>>(chunk: &Chunk, name: S) {
     println!("== {} ==", name.as_ref());
 
@@ -9,7 +16,7 @@ pub fn disassemble_chunk<S: AsRef<str>>(chunk: &Chunk, name: S) {
     }
 }
 
-fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
+pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     print!("{:04} ", offset);
 
     if offset > 0 && chunk.get_line(offset) == chunk.get_line(offset - 1) {
@@ -23,6 +30,11 @@ fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         Ok(code) => match code {
             OpCode::Return => simple_instruction("OP_RETURN", offset),
             OpCode::Constant => constant_instruction("OP_CONSTANT", chunk, offset),
+            OpCode::Negate => simple_instruction("OP_NEGATE", offset),
+            OpCode::Add => simple_instruction("OP_ADD", offset),
+            OpCode::Subtract => simple_instruction("OP_SUBTRACT", offset),
+            OpCode::Multiply => simple_instruction("OP_MULTIPLY", offset),
+            OpCode::Divide => simple_instruction("OP_DIVIDE", offset),
         },
         Err(_) => {
             println!("Unknown opcode {}", instruction);

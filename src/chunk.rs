@@ -4,6 +4,11 @@ use crate::value::ValueArray;
 pub enum OpCode {
     Return = 0,
     Constant = 1,
+    Negate = 2,
+    Add = 3,
+    Subtract = 4,
+    Multiply = 5,
+    Divide = 6,
     // remember to modify the following areas when adding
     // a new enum variant:
     //      - OpCode::try_from()
@@ -16,6 +21,11 @@ impl TryFrom<u8> for OpCode {
         match value {
             0 => Ok(OpCode::Return),
             1 => Ok(OpCode::Constant),
+            2 => Ok(OpCode::Negate),
+            3 => Ok(OpCode::Add),
+            4 => Ok(OpCode::Subtract),
+            5 => Ok(OpCode::Multiply),
+            6 => Ok(OpCode::Divide),
             _ => Err(()),
         }
     }
