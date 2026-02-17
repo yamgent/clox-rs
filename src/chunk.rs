@@ -1,5 +1,6 @@
 use crate::value::ValueArray;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[repr(u8)]
 pub enum OpCode {
     Return = 0,
@@ -12,6 +13,7 @@ pub enum OpCode {
     // remember to modify the following areas when adding
     // a new enum variant:
     //      - OpCode::try_from()
+    //      - tests::test_opcode_try_from()
 }
 
 impl TryFrom<u8> for OpCode {
@@ -69,5 +71,69 @@ impl Chunk {
 
     pub fn constants_mut(&mut self) -> &mut ValueArray {
         &mut self.constants
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_opcode_try_from() {
+        [
+            OpCode::Return,
+            OpCode::Constant,
+            OpCode::Negate,
+            OpCode::Add,
+            OpCode::Subtract,
+            OpCode::Multiply,
+            OpCode::Divide,
+        ]
+        .into_iter()
+        .for_each(|opcode| {
+            assert_eq!(
+                <u8 as TryInto::<OpCode>>::try_into(opcode as u8),
+                Ok(opcode),
+                "{:?}",
+                opcode
+            );
+        });
+
+        assert_eq!(<u8 as TryInto::<OpCode>>::try_into(255), Err(()));
+    }
+
+    #[test]
+    fn test_chunk_write() {
+        let mut chunk = Chunk::new();
+        chunk.write(8, 155);
+        chunk.write(9, 156);
+        chunk.write(15, 156);
+        chunk.write(2, 157);
+
+        assert_eq!(chunk.code, vec![8, 9, 15, 2]);
+        assert_eq!(chunk.lines, vec![155, 156, 156, 157]);
+
+        assert_eq!(chunk.get_code(0), 8);
+        assert_eq!(chunk.get_code(1), 9);
+        assert_eq!(chunk.get_code(2), 15);
+        assert_eq!(chunk.get_code(3), 2);
+
+        assert_eq!(chunk.get_line(0), 155);
+        assert_eq!(chunk.get_line(1), 156);
+        assert_eq!(chunk.get_line(2), 156);
+        assert_eq!(chunk.get_line(3), 157);
+
+        assert_eq!(chunk.code_len(), 4);
+    }
+
+    #[test]
+    fn test_chunk_constants() {
+        let mut chunk = Chunk::new();
+        let mut value_array = ValueArray::new();
+        assert_eq!(chunk.constants(), &value_array);
+
+        value_array.add(10.0);
+        chunk.constants_mut().add(10.0);
+        assert_eq!(chunk.constants(), &value_array);
     }
 }
