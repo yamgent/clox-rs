@@ -29,8 +29,14 @@ impl VM {
 
     pub fn interpret(&mut self, source: String) -> Result<(), InterpretError> {
         let mut compiler = Compiler::new(source);
-        compiler.compile();
-        Ok(())
+        let chunk = compiler
+            .compile()
+            .map_err(|_| InterpretError::CompileError)?;
+
+        self.chunk = chunk;
+        self.ip = 0;
+
+        self.run()
     }
 
     fn pop_stack(&mut self) -> Value {
@@ -104,3 +110,5 @@ impl VM {
         }
     }
 }
+
+// TODO: Tests
