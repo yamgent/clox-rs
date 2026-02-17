@@ -1,3 +1,5 @@
+use std::io;
+
 use crate::{
     chunk::{Chunk, OpCode},
     compiler::Compiler,
@@ -60,7 +62,7 @@ impl VM {
                     print!("[ {} ]", value);
                 });
                 println!();
-                debug::disassemble_instruction(&self.chunk, self.ip);
+                debug::disassemble_instruction(&mut io::stdout(), &self.chunk, self.ip);
             }
 
             let instruction = read_byte(self);
