@@ -54,7 +54,7 @@ pub enum TokenKind {
     While,
 
     Error,
-    EOF,
+    EndOfFile,
 }
 
 pub struct Token<'a> {
@@ -79,7 +79,7 @@ impl Scanner {
         self.start = self.current;
 
         if self.is_at_end() {
-            return self.make_token(TokenKind::EOF);
+            return self.make_token(TokenKind::EndOfFile);
         }
 
         let c = self.advance();
@@ -166,9 +166,7 @@ impl Scanner {
     }
 
     fn match_ch(&mut self, expected: char) -> bool {
-        if self.is_at_end() {
-            false
-        } else if self.source.as_bytes()[self.current] as char != expected {
+        if self.is_at_end() || self.source.as_bytes()[self.current] as char != expected {
             false
         } else {
             self.current += 1;
@@ -340,7 +338,7 @@ mod tests {
             assert_eq!(scanner.scan_token().kind, TokenKind::Semicolon);
             assert_eq!(scanner.scan_token().kind, TokenKind::Slash);
             assert_eq!(scanner.scan_token().kind, TokenKind::Star);
-            assert_eq!(scanner.scan_token().kind, TokenKind::EOF);
+            assert_eq!(scanner.scan_token().kind, TokenKind::EndOfFile);
         }
 
         {
@@ -397,7 +395,7 @@ mod tests {
             assert_eq!(scanner.scan_token().kind, TokenKind::True);
             assert_eq!(scanner.scan_token().kind, TokenKind::Var);
             assert_eq!(scanner.scan_token().kind, TokenKind::While);
-            assert_eq!(scanner.scan_token().kind, TokenKind::EOF);
+            assert_eq!(scanner.scan_token().kind, TokenKind::EndOfFile);
         }
 
         {
@@ -428,7 +426,7 @@ fun hi() {
             assert_eq!(scanner.scan_token().kind, TokenKind::Return);
             assert_eq!(scanner.scan_token().kind, TokenKind::Semicolon);
             assert_eq!(scanner.scan_token().kind, TokenKind::RightBrace);
-            assert_eq!(scanner.scan_token().kind, TokenKind::EOF);
+            assert_eq!(scanner.scan_token().kind, TokenKind::EndOfFile);
         }
     }
 

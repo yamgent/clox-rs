@@ -27,7 +27,7 @@ impl Compiler {
             }
             println!("{:?} '{}'", token.kind, token.lexeme);
 
-            if matches!(token.kind, TokenKind::EOF) {
+            if matches!(token.kind, TokenKind::EndOfFile) {
                 break;
             }
         }

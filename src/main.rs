@@ -14,7 +14,7 @@ use std::{
 use crate::vm::{InterpretError, VM};
 
 fn main() {
-    let args = env::args().into_iter().collect::<Vec<_>>();
+    let args = env::args().collect::<Vec<_>>();
 
     if args.len() == 1 {
         repl();
