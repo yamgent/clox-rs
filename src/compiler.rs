@@ -1,5 +1,5 @@
 use crate::{
-    chunk::Chunk,
+    chunk::{Chunk, OpCode},
     scanner::{Scanner, Token, TokenKind},
 };
 
@@ -42,14 +42,17 @@ impl Compiler {
     }
 
     pub fn compile(&mut self) -> Result<Chunk, ()> {
+        let mut chunk = Chunk::new();
+
         self.advance();
         self.expression();
         self.consume(TokenKind::EndOfFile, "Expect end of expression.");
+        self.end_compiler(&mut chunk);
 
         if self.parser.had_error {
             Err(())
         } else {
-            Ok(Chunk::new())
+            Ok(chunk)
         }
     }
 
@@ -73,6 +76,22 @@ impl Compiler {
         } else {
             self.error_at_current(message);
         }
+    }
+
+    fn emit_byte(&self, chunk: &mut Chunk, byte: u8) {
+        chunk.write(byte, self.parser.previous.line as u32);
+    }
+
+    fn emit_bytes(&self, chunk: &mut Chunk, bytes: &[u8]) {
+        bytes.iter().for_each(|byte| self.emit_byte(chunk, *byte));
+    }
+
+    fn end_compiler(&self, chunk: &mut Chunk) {
+        self.emit_return(chunk);
+    }
+
+    fn emit_return(&self, chunk: &mut Chunk) {
+        self.emit_byte(chunk, OpCode::Return as u8);
     }
 
     fn expression(&mut self) {
