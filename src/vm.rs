@@ -13,6 +13,7 @@ pub struct VM {
     stack: Vec<Value>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum InterpretError {
     CompileError,
     RuntimeError,
@@ -27,7 +28,7 @@ impl VM {
         }
     }
 
-    pub fn interpret(&mut self, source: String) -> Result<(), InterpretError> {
+    pub fn interpret(&mut self, source: String) -> Result<Option<Value>, InterpretError> {
         let mut compiler = Compiler::new(source);
         let chunk = compiler
             .compile()
@@ -49,7 +50,7 @@ impl VM {
         self.stack.push(value);
     }
 
-    pub fn run(&mut self) -> Result<(), InterpretError> {
+    fn run(&mut self) -> Result<Option<Value>, InterpretError> {
         fn read_byte(vm: &mut VM) -> u8 {
             let instruction = vm.chunk.get_code(vm.ip);
             vm.ip += 1;
@@ -79,8 +80,9 @@ impl VM {
 
             match instruction {
                 OpCode::Return => {
-                    println!("{}", self.pop_stack());
-                    return Ok(());
+                    let value = self.pop_stack();
+                    println!("{}", value);
+                    return Ok(Some(value));
                 }
                 OpCode::Constant => {
                     let constant = read_constant(self);
@@ -111,4 +113,54 @@ impl VM {
     }
 }
 
-// TODO: Tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_vm_interpret() {
+        // this whole test is just black-box testing
+
+        // test error
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("1 +".to_string()),
+                Err(InterpretError::CompileError)
+            );
+        }
+
+        // test unary ops
+        {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret("-3".to_string()), Ok(Some(-3.0)));
+        }
+
+        // test binary ops
+        {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret("1 + 2".to_string()), Ok(Some(3.0)));
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret("8 - 3".to_string()), Ok(Some(5.0)));
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret("5 * 6".to_string()), Ok(Some(30.0)));
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret("28 / 4".to_string()), Ok(Some(7.0)));
+        }
+
+        // test complex expressions
+        {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret("(-1 + 2) * 3 - -4".to_string()), Ok(Some(7.0)));
+        }
+    }
+}
