@@ -19,7 +19,7 @@ struct Parser {
     panic_mode: bool,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     None,
     Assignment, // =
@@ -285,4 +285,218 @@ impl Compiler {
     }
 }
 
-// TODO: Test
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_compiler_compile() {
+        // test error
+        {
+            let mut compiler = Compiler::new("1 +".to_string());
+            assert_eq!(compiler.compile(), Err(()));
+        }
+
+        // test unary ops
+        {
+            let mut compiler = Compiler::new("-3".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(3.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Negate as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        // test binary ops
+        {
+            let mut compiler = Compiler::new("1 + 2".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(1.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(2.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Add as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("8 - 3".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(8.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(3.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Subtract as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("5 * 6".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(5.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(6.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Multiply as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("28 / 4".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(28.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(4.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Divide as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        // test complex expressions
+        {
+            let mut compiler = Compiler::new("(-1 + 2) * 3 - -4".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(1.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Negate as u8, 1);
+
+            let constant = chunk.constants_mut().add(2.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Add as u8, 1);
+
+            let constant = chunk.constants_mut().add(3.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Multiply as u8, 1);
+
+            let constant = chunk.constants_mut().add(4.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Negate as u8, 1);
+
+            chunk.write(OpCode::Subtract as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        // test multi-line
+        {
+            let mut compiler = Compiler::new("5\n*\n6".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(5.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(6.0);
+            chunk.write(OpCode::Constant as u8, 3);
+            chunk.write(constant as u8, 3);
+
+            // NOTE: line = 3 is deliberate, the book acknowledge this
+            // flaw, and we are too lazy to come up with a solution
+            chunk.write(OpCode::Multiply as u8, 3);
+
+            chunk.write(OpCode::Return as u8, 3);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        // test basic arithmetic precedences
+        {
+            let mut compiler = Compiler::new("1 - 4 * 6".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(1.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(4.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(6.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Multiply as u8, 1);
+
+            chunk.write(OpCode::Subtract as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("1 * 4 - 6".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(1.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(4.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Multiply as u8, 1);
+
+            let constant = chunk.constants_mut().add(6.0);
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Subtract as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+    }
+}
