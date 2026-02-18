@@ -196,7 +196,7 @@ impl Compiler {
 
     fn emit_constant(&self, chunk: &mut Chunk, value: Value) {
         let constant_index = self.make_constant(chunk, value);
-        self.emit_byte(chunk, constant_index);
+        self.emit_bytes(chunk, &[OpCode::Constant as u8, constant_index]);
     }
 
     fn expression(&mut self, chunk: &mut Chunk) {
