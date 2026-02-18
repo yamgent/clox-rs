@@ -1,6 +1,7 @@
 use crate::{
     chunk::{Chunk, OpCode},
     scanner::{Scanner, Token, TokenKind},
+    value::Value,
 };
 
 struct Parser {
@@ -13,6 +14,20 @@ struct Parser {
     // to false. Hence, this boolean cannot tell whether an error happened in the
     // code at all. For that, use `had_error` instead.
     panic_mode: bool,
+}
+
+enum Precedence {
+    None,
+    Assignment, // =
+    Or,         // or
+    And,        // and
+    Equality,   // == !=
+    Comparison, // < > <= >=
+    Term,       // + -
+    Factor,     // * /
+    Unary,      // ! -
+    Call,       // . ()
+    Primary,
 }
 
 pub struct Compiler {
@@ -90,13 +105,53 @@ impl Compiler {
         self.emit_return(chunk);
     }
 
+    fn grouping(&mut self) {
+        self.expression();
+        self.consume(TokenKind::RightParen, "Expect ')' after expression.");
+    }
+
+    fn number(&mut self, chunk: &mut Chunk) {
+        let value = self
+            .parser
+            .previous
+            .lexeme
+            .parse()
+            .expect("ICE: Non-number stored in number token?");
+        self.emit_constant(chunk, value);
+    }
+
+    fn unary(&mut self, chunk: &mut Chunk) {
+        let operator_type = self.parser.previous.kind;
+
+        self.parse_precedence(Precedence::Unary);
+
+        if matches!(operator_type, TokenKind::Minus) {
+            self.emit_byte(chunk, OpCode::Negate as u8);
+        } else {
+            panic!("ICE: Unhandled unary.");
+        }
+    }
+
     fn emit_return(&self, chunk: &mut Chunk) {
         self.emit_byte(chunk, OpCode::Return as u8);
     }
 
-    fn expression(&mut self) {
-        // TODO: implement
+    fn make_constant(&self, chunk: &mut Chunk, value: Value) -> u8 {
+        let constant = chunk.constants_mut().add(value);
+        TryInto::<u8>::try_into(constant)
+            .unwrap_or_else(|_| panic!("ICE: Too many constants in one chunk."))
     }
+
+    fn emit_constant(&mut self, chunk: &mut Chunk, value: Value) {
+        let constant_index = self.make_constant(chunk, value);
+        self.emit_byte(chunk, constant_index);
+    }
+
+    fn expression(&mut self) {
+        self.parse_precedence(Precedence::Assignment);
+    }
+
+    fn parse_precedence(&self, precedence: Precedence) {}
 
     fn error_at_current<S: AsRef<str>>(&mut self, message: S) {
         let token = self.parser.current.clone();
