@@ -1,5 +1,8 @@
+use std::io;
+
 use crate::{
     chunk::{Chunk, OpCode},
+    debug,
     scanner::{Scanner, Token, TokenKind},
     value::Value,
 };
@@ -16,6 +19,7 @@ struct Parser {
     panic_mode: bool,
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     None,
     Assignment, // =
@@ -28,6 +32,27 @@ enum Precedence {
     Unary,      // ! -
     Call,       // . ()
     Primary,
+}
+
+impl Precedence {
+    fn plus_one(&self) -> Precedence {
+        match self {
+            Precedence::None => Precedence::Assignment,
+            Precedence::Assignment => Precedence::Or,
+            Precedence::Or => Precedence::And,
+            Precedence::And => Precedence::Equality,
+            Precedence::Equality => Precedence::Comparison,
+            Precedence::Comparison => Precedence::Term,
+            Precedence::Term => Precedence::Factor,
+            Precedence::Factor => Precedence::Unary,
+            Precedence::Unary => Precedence::Call,
+            Precedence::Call => Precedence::Primary,
+            Precedence::Primary => {
+                // nothing higher than Primary
+                Precedence::Primary
+            }
+        }
+    }
 }
 
 pub struct Compiler {
@@ -60,7 +85,7 @@ impl Compiler {
         let mut chunk = Chunk::new();
 
         self.advance();
-        self.expression();
+        self.expression(&mut chunk);
         self.consume(TokenKind::EndOfFile, "Expect end of expression.");
         self.end_compiler(&mut chunk);
 
@@ -103,14 +128,41 @@ impl Compiler {
 
     fn end_compiler(&self, chunk: &mut Chunk) {
         self.emit_return(chunk);
+
+        if debug::is_debug_print_code_enabled() && !self.parser.had_error {
+            debug::disassemble_chunk(&mut io::stdout(), chunk, "code");
+        }
     }
 
-    fn grouping(&mut self) {
-        self.expression();
+    fn binary(&mut self, chunk: &mut Chunk) {
+        let operator_type = self.parser.previous.kind;
+        self.parse_precedence(chunk, self.get_rule_precedence(operator_type).plus_one());
+
+        match operator_type {
+            TokenKind::Plus => {
+                self.emit_byte(chunk, OpCode::Add as u8);
+            }
+            TokenKind::Minus => {
+                self.emit_byte(chunk, OpCode::Subtract as u8);
+            }
+            TokenKind::Star => {
+                self.emit_byte(chunk, OpCode::Multiply as u8);
+            }
+            TokenKind::Slash => {
+                self.emit_byte(chunk, OpCode::Divide as u8);
+            }
+            _ => {
+                panic!("ICE: Unhandled binary");
+            }
+        }
+    }
+
+    fn grouping(&mut self, chunk: &mut Chunk) {
+        self.expression(chunk);
         self.consume(TokenKind::RightParen, "Expect ')' after expression.");
     }
 
-    fn number(&mut self, chunk: &mut Chunk) {
+    fn number(&self, chunk: &mut Chunk) {
         let value = self
             .parser
             .previous
@@ -123,7 +175,7 @@ impl Compiler {
     fn unary(&mut self, chunk: &mut Chunk) {
         let operator_type = self.parser.previous.kind;
 
-        self.parse_precedence(Precedence::Unary);
+        self.parse_precedence(chunk, Precedence::Unary);
 
         if matches!(operator_type, TokenKind::Minus) {
             self.emit_byte(chunk, OpCode::Negate as u8);
@@ -142,16 +194,60 @@ impl Compiler {
             .unwrap_or_else(|_| panic!("ICE: Too many constants in one chunk."))
     }
 
-    fn emit_constant(&mut self, chunk: &mut Chunk, value: Value) {
+    fn emit_constant(&self, chunk: &mut Chunk, value: Value) {
         let constant_index = self.make_constant(chunk, value);
         self.emit_byte(chunk, constant_index);
     }
 
-    fn expression(&mut self) {
-        self.parse_precedence(Precedence::Assignment);
+    fn expression(&mut self, chunk: &mut Chunk) {
+        self.parse_precedence(chunk, Precedence::Assignment);
     }
 
-    fn parse_precedence(&self, precedence: Precedence) {}
+    fn parse_precedence(&mut self, chunk: &mut Chunk, precedence: Precedence) {
+        self.advance();
+        self.do_rule_prefix(chunk, self.parser.previous.kind);
+
+        while precedence <= self.get_rule_precedence(self.parser.current.kind) {
+            self.advance();
+            self.do_rule_infix(chunk, self.parser.previous.kind);
+        }
+    }
+
+    fn get_rule_precedence(&self, kind: TokenKind) -> Precedence {
+        match kind {
+            TokenKind::Minus | TokenKind::Plus => Precedence::Term,
+            TokenKind::Slash | TokenKind::Star => Precedence::Factor,
+            _ => Precedence::None,
+        }
+    }
+
+    fn do_rule_prefix(&mut self, chunk: &mut Chunk, kind: TokenKind) {
+        match kind {
+            TokenKind::LeftParen => {
+                self.grouping(chunk);
+            }
+            TokenKind::Minus => {
+                self.unary(chunk);
+            }
+            TokenKind::Number => {
+                self.number(chunk);
+            }
+            _ => {
+                self.error("Expect expression.");
+            }
+        }
+    }
+
+    fn do_rule_infix(&mut self, chunk: &mut Chunk, kind: TokenKind) {
+        match kind {
+            TokenKind::Minus | TokenKind::Plus | TokenKind::Slash | TokenKind::Star => {
+                self.binary(chunk);
+            }
+            _ => {
+                self.error("Expect expression.");
+            }
+        }
+    }
 
     fn error_at_current<S: AsRef<str>>(&mut self, message: S) {
         let token = self.parser.current.clone();

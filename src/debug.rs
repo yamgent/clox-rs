@@ -9,6 +9,13 @@ pub fn is_debug_trace_execution_enabled() -> bool {
     }
 }
 
+pub fn is_debug_print_code_enabled() -> bool {
+    match std::env::var("DEBUG_PRINT_CODE") {
+        Ok(value) => value == "1",
+        Err(_) => false,
+    }
+}
+
 pub fn disassemble_chunk<S: AsRef<str>, W: io::Write>(w: &mut W, chunk: &Chunk, name: S) {
     writeln!(w, "== {} ==", name.as_ref()).expect("writable");
 
