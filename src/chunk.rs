@@ -33,6 +33,7 @@ impl TryFrom<u8> for OpCode {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Chunk {
     code: Vec<u8>,
     constants: ValueArray,

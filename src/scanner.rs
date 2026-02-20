@@ -5,7 +5,7 @@ pub struct Scanner {
     line: usize,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TokenKind {
     // single character token
     LeftParen,
@@ -57,9 +57,10 @@ pub enum TokenKind {
     EndOfFile,
 }
 
-pub struct Token<'a> {
+#[derive(Debug, Clone)]
+pub struct Token {
     pub kind: TokenKind,
-    pub lexeme: &'a str,
+    pub lexeme: String,
     pub line: usize,
 }
 
@@ -73,7 +74,7 @@ impl Scanner {
         }
     }
 
-    pub fn scan_token(&mut self) -> Token<'_> {
+    pub fn scan_token(&mut self) -> Token {
         self.skip_whitespace();
 
         self.start = self.current;
@@ -174,18 +175,18 @@ impl Scanner {
         }
     }
 
-    fn make_token(&self, kind: TokenKind) -> Token<'_> {
+    fn make_token(&self, kind: TokenKind) -> Token {
         Token {
             kind,
-            lexeme: &self.source[self.start..self.current],
+            lexeme: self.source[self.start..self.current].into(),
             line: self.line,
         }
     }
 
-    fn error_token<'a>(&self, message: &'a str) -> Token<'a> {
+    fn error_token(&self, message: &str) -> Token {
         Token {
             kind: TokenKind::Error,
-            lexeme: message,
+            lexeme: message.into(),
             line: self.line,
         }
     }
@@ -219,7 +220,7 @@ impl Scanner {
         }
     }
 
-    fn identifier(&mut self) -> Token<'_> {
+    fn identifier(&mut self) -> Token {
         loop {
             let ch = self.peek();
             if ch.is_ascii_alphabetic() || ch.is_ascii_digit() || ch == '_' {
@@ -284,7 +285,7 @@ impl Scanner {
         }
     }
 
-    fn number(&mut self) -> Token<'_> {
+    fn number(&mut self) -> Token {
         while self.peek().is_ascii_digit() {
             self.advance();
         }
@@ -302,7 +303,7 @@ impl Scanner {
         self.make_token(TokenKind::Number)
     }
 
-    fn string(&mut self) -> Token<'_> {
+    fn string(&mut self) -> Token {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line += 1;
