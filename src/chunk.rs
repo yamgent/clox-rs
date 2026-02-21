@@ -10,6 +10,13 @@ pub enum OpCode {
     Subtract = 4,
     Multiply = 5,
     Divide = 6,
+    Nil = 7,
+    True = 8,
+    False = 9,
+    Not = 10,
+    Equal = 11,
+    Greater = 12,
+    Less = 13,
     // remember to modify the following areas when adding
     // a new enum variant:
     //      - OpCode::try_from()
@@ -28,6 +35,13 @@ impl TryFrom<u8> for OpCode {
             4 => Ok(OpCode::Subtract),
             5 => Ok(OpCode::Multiply),
             6 => Ok(OpCode::Divide),
+            7 => Ok(OpCode::Nil),
+            8 => Ok(OpCode::True),
+            9 => Ok(OpCode::False),
+            10 => Ok(OpCode::Not),
+            11 => Ok(OpCode::Equal),
+            12 => Ok(OpCode::Greater),
+            13 => Ok(OpCode::Less),
             _ => Err(()),
         }
     }
@@ -77,6 +91,8 @@ impl Chunk {
 
 #[cfg(test)]
 mod tests {
+    use crate::value::Value;
+
     use super::*;
 
     #[test]
@@ -89,6 +105,13 @@ mod tests {
             OpCode::Subtract,
             OpCode::Multiply,
             OpCode::Divide,
+            OpCode::Nil,
+            OpCode::True,
+            OpCode::False,
+            OpCode::Not,
+            OpCode::Equal,
+            OpCode::Greater,
+            OpCode::Less,
         ]
         .into_iter()
         .for_each(|opcode| {
@@ -133,8 +156,8 @@ mod tests {
         let mut value_array = ValueArray::new();
         assert_eq!(chunk.constants(), &value_array);
 
-        value_array.add(10.0);
-        chunk.constants_mut().add(10.0);
+        value_array.add(Value::Number(10.0));
+        chunk.constants_mut().add(Value::Number(10.0));
         assert_eq!(chunk.constants(), &value_array);
     }
 }
