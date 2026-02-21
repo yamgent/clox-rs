@@ -177,303 +177,70 @@ mod tests {
     #[test]
     fn test_vm_interpret() {
         // this whole test is just black-box testing
+        //
+        fn assert_error(source: &str, error: InterpretError) {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret(source.to_string()), Err(error));
+        }
+
+        fn assert_success_with_value(source: &str, value: Value) {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret(source.to_string()), Ok(Some(value)));
+        }
 
         // test error
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("1 +".to_string()),
-                Err(InterpretError::CompileError)
-            );
-        }
+        assert_error("1 +", InterpretError::CompileError);
+        // negate does not work on booleans
+        assert_error("-false", InterpretError::RuntimeError);
+        // arithmetic does not work on booleans
+        assert_error("true + false", InterpretError::RuntimeError);
 
         // test unary ops
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("-3".to_string()),
-                Ok(Some(Value::Number(-3.0)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("!true".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("!false".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("!nil".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            // intentional: In lox, only `nil` and `false` are falsey, everything else is truthy
-            assert_eq!(vm.interpret("!0".to_string()), Ok(Some(Value::Bool(false))));
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(vm.interpret("!1".to_string()), Ok(Some(Value::Bool(false))));
-        }
+        assert_success_with_value("-3", Value::Number(-3.0));
+        assert_success_with_value("!true", Value::Bool(false));
+        assert_success_with_value("!false", Value::Bool(true));
+        assert_success_with_value("!nil", Value::Bool(true));
+        // intentional: In lox, only `nil` and `false` are falsey, everything else is truthy
+        assert_success_with_value("!0", Value::Bool(false));
+        assert_success_with_value("!1", Value::Bool(false));
 
         // test binary ops
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("1 + 2".to_string()),
-                Ok(Some(Value::Number(3.0)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("8 - 3".to_string()),
-                Ok(Some(Value::Number(5.0)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("5 * 6".to_string()),
-                Ok(Some(Value::Number(30.0)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("28 / 4".to_string()),
-                Ok(Some(Value::Number(7.0)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("2 > 3".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("3 > 3".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("4 > 3".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("2 >= 3".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("3 >= 3".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("4 >= 3".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("2 < 3".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("3 < 3".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("4 < 3".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("2 <= 3".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("3 <= 3".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("4 <= 3".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            // the book intentionally desugarize `a <= b` to `!(a > b)`. But this
-            // means that `NaN <= 1` will return true, but according to IEEE-754,
-            // this should be false. The book intentionally make this decision to
-            // make implementation simpler
-            assert_eq!(
-                vm.interpret("(0.0 / 0.0) <= 1".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            // the book intentionally desugarize `a >= b` to `!(a < b)`. But this
-            // means that `NaN >= 1` will return true, but according to IEEE-754,
-            // this should be false. The book intentionally make this decision to
-            // make implementation simpler
-            assert_eq!(
-                vm.interpret("(0.0 / 0.0) >= 1".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("2 == 2".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("2 != 2".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("3 == 2".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("3 != 2".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("true == 1".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("false == nil".to_string()),
-                Ok(Some(Value::Bool(false)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("nil == nil".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
+        assert_success_with_value("1 + 2", Value::Number(3.0));
+        assert_success_with_value("8 - 3", Value::Number(5.0));
+        assert_success_with_value("5 * 6", Value::Number(30.0));
+        assert_success_with_value("28 / 4", Value::Number(7.0));
+        assert_success_with_value("2 > 3", Value::Bool(false));
+        assert_success_with_value("3 > 3", Value::Bool(false));
+        assert_success_with_value("4 > 3", Value::Bool(true));
+        assert_success_with_value("2 >= 3", Value::Bool(false));
+        assert_success_with_value("3 >= 3", Value::Bool(true));
+        assert_success_with_value("4 >= 3", Value::Bool(true));
+        assert_success_with_value("2 < 3", Value::Bool(true));
+        assert_success_with_value("3 < 3", Value::Bool(false));
+        assert_success_with_value("4 < 3", Value::Bool(false));
+        assert_success_with_value("2 <= 3", Value::Bool(true));
+        assert_success_with_value("3 <= 3", Value::Bool(true));
+        assert_success_with_value("4 <= 3", Value::Bool(false));
+        // the book intentionally desugarize `a <= b` to `!(a > b)`. But this
+        // means that `NaN <= 1` will return true, but according to IEEE-754,
+        // this should be false. The book intentionally make this decision to
+        // make implementation simpler
+        assert_success_with_value("(0.0 / 0.0) <= 1", Value::Bool(true));
+        // the book intentionally desugarize `a >= b` to `!(a < b)`. But this
+        // means that `NaN >= 1` will return true, but according to IEEE-754,
+        // this should be false. The book intentionally make this decision to
+        // make implementation simpler
+        assert_success_with_value("(0.0 / 0.0) >= 1", Value::Bool(true));
+        assert_success_with_value("2 == 2", Value::Bool(true));
+        assert_success_with_value("2 != 2", Value::Bool(false));
+        assert_success_with_value("3 == 2", Value::Bool(false));
+        assert_success_with_value("3 != 2", Value::Bool(true));
+        assert_success_with_value("true == 1", Value::Bool(false));
+        assert_success_with_value("false == nil", Value::Bool(false));
+        assert_success_with_value("nil == nil", Value::Bool(true));
 
         // test complex expressions
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("(-1 + 2) * 3 - -4".to_string()),
-                Ok(Some(Value::Number(7.0)))
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            assert_eq!(
-                vm.interpret("!(5 - 4 > 3 * 2 == !nil)".to_string()),
-                Ok(Some(Value::Bool(true)))
-            );
-        }
-
-        // test runtime errors
-        {
-            let mut vm = VM::new();
-            // negate does not work on booleans
-            assert_eq!(
-                vm.interpret("-false".to_string()),
-                Err(InterpretError::RuntimeError)
-            );
-        }
-
-        {
-            let mut vm = VM::new();
-            // arithmetic does not work on booleans
-            assert_eq!(
-                vm.interpret("true + false".to_string()),
-                Err(InterpretError::RuntimeError)
-            );
-        }
+        assert_success_with_value("(-1 + 2) * 3 - -4", Value::Number(7.0));
+        assert_success_with_value("!(5 - 4 > 3 * 2 == !nil)", Value::Bool(true));
     }
 }
