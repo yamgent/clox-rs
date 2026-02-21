@@ -21,10 +21,7 @@ pub enum InterpretError {
 
 impl VM {
     pub fn interpret(source: String) -> Result<Option<Value>, InterpretError> {
-        let mut compiler = Compiler::new(source);
-        let chunk = compiler
-            .compile()
-            .map_err(|_| InterpretError::CompileError)?;
+        let chunk = Compiler::compile(source).map_err(|_| InterpretError::CompileError)?;
 
         let mut vm = Self {
             chunk,

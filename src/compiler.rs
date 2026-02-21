@@ -61,8 +61,8 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn new(source: String) -> Self {
-        Self {
+    pub fn compile(source: String) -> Result<Chunk, ()> {
+        let mut compiler = Self {
             scanner: Scanner::new(source),
             parser: Parser {
                 previous: Token {
@@ -78,18 +78,16 @@ impl Compiler {
                 had_error: false,
                 panic_mode: false,
             },
-        }
-    }
+        };
 
-    pub fn compile(&mut self) -> Result<Chunk, ()> {
         let mut chunk = Chunk::new();
 
-        self.advance();
-        self.expression(&mut chunk);
-        self.consume(TokenKind::EndOfFile, "Expect end of expression.");
-        self.end_compiler(&mut chunk);
+        compiler.advance();
+        compiler.expression(&mut chunk);
+        compiler.consume(TokenKind::EndOfFile, "Expect end of expression.");
+        compiler.end_compiler(&mut chunk);
 
-        if self.parser.had_error {
+        if compiler.parser.had_error {
             Err(())
         } else {
             Ok(chunk)
@@ -358,14 +356,10 @@ mod tests {
     #[test]
     fn test_compiler_compile() {
         // test error
-        {
-            let mut compiler = Compiler::new("1 +".to_string());
-            assert_eq!(compiler.compile(), Err(()));
-        }
+        assert_eq!(Compiler::compile("1 +".to_string()), Err(()));
 
         // test unary ops
         {
-            let mut compiler = Compiler::new("-3".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(3.0));
@@ -376,23 +370,21 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("-3".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("!true".to_string());
             let mut chunk = Chunk::new();
 
             chunk.write(OpCode::True as u8, 1);
             chunk.write(OpCode::Not as u8, 1);
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("!true".to_string()), Ok(chunk));
         }
 
         // test binary ops
         {
-            let mut compiler = Compiler::new("1 + 2".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(1.0));
@@ -407,11 +399,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("1 + 2".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("8 - 3".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(8.0));
@@ -426,11 +417,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("8 - 3".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("5 * 6".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(5.0));
@@ -445,11 +435,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("5 * 6".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("28 / 4".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(28.0));
@@ -464,11 +453,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("28 / 4".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("true == nil".to_string());
             let mut chunk = Chunk::new();
 
             chunk.write(OpCode::True as u8, 1);
@@ -479,11 +467,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("true == nil".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("false != nil".to_string());
             let mut chunk = Chunk::new();
 
             chunk.write(OpCode::False as u8, 1);
@@ -495,11 +482,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("false != nil".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("3 > 4".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(3.0));
@@ -514,11 +500,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("3 > 4".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("3 >= 4".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(3.0));
@@ -537,11 +522,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("3 >= 4".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("3 < 4".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(3.0));
@@ -556,11 +540,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("3 < 4".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("3 <= 4".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(3.0));
@@ -579,12 +562,11 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("3 <= 4".to_string()), Ok(chunk));
         }
 
         // test complex expressions
         {
-            let mut compiler = Compiler::new("(-1 + 2) * 3 - -4".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(1.0));
@@ -615,12 +597,14 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(
+                Compiler::compile("(-1 + 2) * 3 - -4".to_string()),
+                Ok(chunk)
+            );
         }
 
         // test multi-line
         {
-            let mut compiler = Compiler::new("5\n*\n6".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(5.0));
@@ -637,12 +621,11 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 3);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("5\n*\n6".to_string()), Ok(chunk));
         }
 
         // test basic arithmetic precedences
         {
-            let mut compiler = Compiler::new("1 - 4 * 6".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(1.0));
@@ -663,11 +646,10 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("1 - 4 * 6".to_string()), Ok(chunk));
         }
 
         {
-            let mut compiler = Compiler::new("1 * 4 - 6".to_string());
             let mut chunk = Chunk::new();
 
             let constant = chunk.constants_mut().add(Value::Number(1.0));
@@ -688,7 +670,7 @@ mod tests {
 
             chunk.write(OpCode::Return as u8, 1);
 
-            assert_eq!(compiler.compile(), Ok(chunk));
+            assert_eq!(Compiler::compile("1 * 4 - 6".to_string()), Ok(chunk));
         }
     }
 }
