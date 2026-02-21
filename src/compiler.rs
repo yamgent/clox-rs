@@ -151,8 +151,51 @@ impl Compiler {
             TokenKind::Slash => {
                 self.emit_byte(chunk, OpCode::Divide as u8);
             }
+            TokenKind::BangEqual => {
+                self.emit_bytes(chunk, &[OpCode::Equal as u8, OpCode::Not as u8]);
+            }
+            TokenKind::EqualEqual => {
+                self.emit_byte(chunk, OpCode::Equal as u8);
+            }
+            TokenKind::Greater => {
+                self.emit_byte(chunk, OpCode::Greater as u8);
+            }
+            // this desugaring means that "NaN <= 1" will be true, violating IEEE-754 where it
+            // should be false. this is done intentionally by the book to make implementation
+            // simpler
+            TokenKind::GreaterEqual => {
+                self.emit_bytes(chunk, &[OpCode::Less as u8, OpCode::Not as u8]);
+            }
+            TokenKind::Less => {
+                self.emit_byte(chunk, OpCode::Less as u8);
+            }
+            // this desugaring means that "NaN >= 1" will be true, violating IEEE-754 where it
+            // should be false. this is done intentionally by the book to make implementation
+            // simpler
+            TokenKind::LessEqual => {
+                self.emit_bytes(chunk, &[OpCode::Greater as u8, OpCode::Not as u8]);
+            }
             _ => {
                 panic!("ICE: Unhandled binary");
+            }
+        }
+    }
+
+    fn literal(&mut self, chunk: &mut Chunk) {
+        let operator_type = self.parser.previous.kind;
+
+        match operator_type {
+            TokenKind::False => {
+                self.emit_byte(chunk, OpCode::False as u8);
+            }
+            TokenKind::True => {
+                self.emit_byte(chunk, OpCode::True as u8);
+            }
+            TokenKind::Nil => {
+                self.emit_byte(chunk, OpCode::Nil as u8);
+            }
+            _ => {
+                panic!("ICE: Unhandled literal");
             }
         }
     }
@@ -177,10 +220,16 @@ impl Compiler {
 
         self.parse_precedence(chunk, Precedence::Unary);
 
-        if matches!(operator_type, TokenKind::Minus) {
-            self.emit_byte(chunk, OpCode::Negate as u8);
-        } else {
-            panic!("ICE: Unhandled unary.");
+        match operator_type {
+            TokenKind::Minus => {
+                self.emit_byte(chunk, OpCode::Negate as u8);
+            }
+            TokenKind::Bang => {
+                self.emit_byte(chunk, OpCode::Not as u8);
+            }
+            _ => {
+                panic!("ICE: Unhandled unary.");
+            }
         }
     }
 
@@ -217,6 +266,11 @@ impl Compiler {
         match kind {
             TokenKind::Minus | TokenKind::Plus => Precedence::Term,
             TokenKind::Slash | TokenKind::Star => Precedence::Factor,
+            TokenKind::BangEqual | TokenKind::EqualEqual => Precedence::Equality,
+            TokenKind::Greater
+            | TokenKind::GreaterEqual
+            | TokenKind::Less
+            | TokenKind::LessEqual => Precedence::Comparison,
             _ => Precedence::None,
         }
     }
@@ -226,11 +280,14 @@ impl Compiler {
             TokenKind::LeftParen => {
                 self.grouping(chunk);
             }
-            TokenKind::Minus => {
+            TokenKind::Minus | TokenKind::Bang => {
                 self.unary(chunk);
             }
             TokenKind::Number => {
                 self.number(chunk);
+            }
+            TokenKind::False | TokenKind::True | TokenKind::Nil => {
+                self.literal(chunk);
             }
             _ => {
                 self.error("Expect expression.");
@@ -240,7 +297,16 @@ impl Compiler {
 
     fn do_rule_infix(&mut self, chunk: &mut Chunk, kind: TokenKind) {
         match kind {
-            TokenKind::Minus | TokenKind::Plus | TokenKind::Slash | TokenKind::Star => {
+            TokenKind::Minus
+            | TokenKind::Plus
+            | TokenKind::Slash
+            | TokenKind::Star
+            | TokenKind::BangEqual
+            | TokenKind::EqualEqual
+            | TokenKind::Greater
+            | TokenKind::GreaterEqual
+            | TokenKind::Less
+            | TokenKind::LessEqual => {
                 self.binary(chunk);
             }
             _ => {

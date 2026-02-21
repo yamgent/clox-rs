@@ -102,27 +102,55 @@ impl VM {
                         }
                     }
                 }
-                OpCode::Add | OpCode::Subtract | OpCode::Multiply | OpCode::Divide => {
+                OpCode::Add
+                | OpCode::Subtract
+                | OpCode::Multiply
+                | OpCode::Divide
+                | OpCode::Greater
+                | OpCode::Less => {
                     let b = self.pop_stack();
                     let a = self.pop_stack();
 
                     match (a, b) {
                         (Value::Number(a), Value::Number(b)) => {
                             let result = match instruction {
-                                OpCode::Add => a + b,
-                                OpCode::Subtract => a - b,
-                                OpCode::Multiply => a * b,
-                                OpCode::Divide => a / b,
+                                OpCode::Add => Value::Number(a + b),
+                                OpCode::Subtract => Value::Number(a - b),
+                                OpCode::Multiply => Value::Number(a * b),
+                                OpCode::Divide => Value::Number(a / b),
+                                OpCode::Greater => Value::Bool(a > b),
+                                OpCode::Less => Value::Bool(a < b),
                                 _ => unreachable!(),
                             };
 
-                            self.push_stack(Value::Number(result));
+                            self.push_stack(result);
                         }
                         _ => {
                             self.runtime_error("Operands must be numbers.");
                             return Err(InterpretError::RuntimeError);
                         }
                     }
+                }
+                OpCode::Nil => {
+                    self.push_stack(Value::Nil);
+                }
+                OpCode::True => {
+                    self.push_stack(Value::Bool(true));
+                }
+                OpCode::False => {
+                    self.push_stack(Value::Bool(false));
+                }
+                OpCode::Not => {
+                    let last = self.stack.last_mut().unwrap_or_else(|| {
+                        panic!("Stack exhausted");
+                    });
+                    *last = Value::Bool(last.is_falsey());
+                }
+                OpCode::Equal => {
+                    let b = self.pop_stack();
+                    let a = self.pop_stack();
+
+                    self.push_stack(Value::Bool(a == b));
                 }
             }
         }

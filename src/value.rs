@@ -5,6 +5,12 @@ pub enum Value {
     Number(f64),
 }
 
+impl Value {
+    pub fn is_falsey(&self) -> bool {
+        matches!(self, Value::Nil | Value::Bool(false))
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct ValueArray {
     values: Vec<Value>,

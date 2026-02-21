@@ -44,6 +44,13 @@ pub fn disassemble_instruction<W: io::Write>(w: &mut W, chunk: &Chunk, offset: u
             OpCode::Subtract => simple_instruction(w, "OP_SUBTRACT", offset),
             OpCode::Multiply => simple_instruction(w, "OP_MULTIPLY", offset),
             OpCode::Divide => simple_instruction(w, "OP_DIVIDE", offset),
+            OpCode::Nil => simple_instruction(w, "OP_NIL", offset),
+            OpCode::True => simple_instruction(w, "OP_TRUE", offset),
+            OpCode::False => simple_instruction(w, "OP_FALSE", offset),
+            OpCode::Not => simple_instruction(w, "OP_NOT", offset),
+            OpCode::Equal => simple_instruction(w, "OP_EQUAL", offset),
+            OpCode::Greater => simple_instruction(w, "OP_GREATER", offset),
+            OpCode::Less => simple_instruction(w, "OP_LESS", offset),
         },
         Err(_) => {
             writeln!(w, "Unknown opcode {}", instruction).expect("writable");
