@@ -3,20 +3,20 @@ use crate::value::ValueArray;
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[repr(u8)]
 pub enum OpCode {
-    Return = 0,
-    Constant = 1,
-    Negate = 2,
-    Add = 3,
-    Subtract = 4,
-    Multiply = 5,
-    Divide = 6,
-    Nil = 7,
-    True = 8,
-    False = 9,
-    Not = 10,
-    Equal = 11,
-    Greater = 12,
-    Less = 13,
+    Return,
+    Constant,
+    Negate,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Nil,
+    True,
+    False,
+    Not,
+    Equal,
+    Greater,
+    Less,
     // remember to modify the following areas when adding
     // a new enum variant:
     //      - OpCode::try_from()
