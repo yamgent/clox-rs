@@ -1,4 +1,9 @@
-pub type Value = f64;
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Value {
+    Nil,
+    Bool(bool),
+    Number(f64),
+}
 
 #[derive(Debug, PartialEq)]
 pub struct ValueArray {
@@ -27,19 +32,22 @@ mod tests {
     #[test]
     fn test_add() {
         let mut value_array = ValueArray::new();
-        assert_eq!(value_array.add(7.0), 0);
-        assert_eq!(value_array.add(5.5), 1);
-        assert_eq!(value_array.add(9.0), 2);
-        assert_eq!(value_array.values, vec![7.0, 5.5, 9.0]);
+        assert_eq!(value_array.add(Value::Number(7.0)), 0);
+        assert_eq!(value_array.add(Value::Number(5.5)), 1);
+        assert_eq!(value_array.add(Value::Number(9.0)), 2);
+        assert_eq!(
+            value_array.values,
+            vec![Value::Number(7.0), Value::Number(5.5), Value::Number(9.0)]
+        );
     }
 
     #[test]
     fn test_get() {
         let value_array = ValueArray {
-            values: vec![7.0, 5.5, 9.0],
+            values: vec![Value::Number(7.0), Value::Number(5.5), Value::Number(9.0)],
         };
-        assert_eq!(value_array.get(0), 7.0);
-        assert_eq!(value_array.get(1), 5.5);
-        assert_eq!(value_array.get(2), 9.0);
+        assert_eq!(value_array.get(0), Value::Number(7.0));
+        assert_eq!(value_array.get(1), Value::Number(5.5));
+        assert_eq!(value_array.get(2), Value::Number(9.0));
     }
 }

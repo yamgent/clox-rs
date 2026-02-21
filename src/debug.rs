@@ -66,7 +66,7 @@ fn constant_instruction<S: AsRef<str>, W: io::Write>(
     let constant = chunk.get_code(offset + 1);
     writeln!(
         w,
-        "{:<16} {:4} '{}'",
+        "{:<16} {:4} '{:?}'",
         name.as_ref(),
         constant,
         chunk.constants().get(constant as usize)
@@ -77,23 +77,25 @@ fn constant_instruction<S: AsRef<str>, W: io::Write>(
 
 #[cfg(test)]
 mod tests {
+    use crate::value::Value;
+
     use super::*;
 
     #[test]
     fn test_disassemble_chunk_and_instructions() {
         let mut chunk = Chunk::new();
 
-        let constant = chunk.constants_mut().add(1.2);
+        let constant = chunk.constants_mut().add(Value::Number(1.2));
         chunk.write(OpCode::Constant as u8, 123);
         chunk.write(constant as u8, 123);
 
-        let constant = chunk.constants_mut().add(3.4);
+        let constant = chunk.constants_mut().add(Value::Number(3.4));
         chunk.write(OpCode::Constant as u8, 123);
         chunk.write(constant as u8, 123);
 
         chunk.write(OpCode::Add as u8, 123);
 
-        let constant = chunk.constants_mut().add(5.6);
+        let constant = chunk.constants_mut().add(Value::Number(5.6));
         chunk.write(OpCode::Constant as u8, 123);
         chunk.write(constant as u8, 123);
 
@@ -116,10 +118,10 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![
                 "== test chunk ==",
-                "0000  123 OP_CONSTANT         0 '1.2'",
-                "0002    | OP_CONSTANT         1 '3.4'",
+                "0000  123 OP_CONSTANT         0 'Number(1.2)'",
+                "0002    | OP_CONSTANT         1 'Number(3.4)'",
                 "0004    | OP_ADD",
-                "0005    | OP_CONSTANT         2 '5.6'",
+                "0005    | OP_CONSTANT         2 'Number(5.6)'",
                 "0007    | OP_DIVIDE",
                 "0008    | OP_NEGATE",
                 "0009    | OP_RETURN",

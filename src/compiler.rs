@@ -167,9 +167,9 @@ impl Compiler {
             .parser
             .previous
             .lexeme
-            .parse()
+            .parse::<f64>()
             .expect("ICE: Non-number stored in number token?");
-        self.emit_constant(chunk, value);
+        self.emit_constant(chunk, Value::Number(value));
     }
 
     fn unary(&mut self, chunk: &mut Chunk) {
@@ -302,7 +302,7 @@ mod tests {
             let mut compiler = Compiler::new("-3".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(3.0);
+            let constant = chunk.constants_mut().add(Value::Number(3.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
@@ -318,11 +318,11 @@ mod tests {
             let mut compiler = Compiler::new("1 + 2".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(1.0);
+            let constant = chunk.constants_mut().add(Value::Number(1.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(2.0);
+            let constant = chunk.constants_mut().add(Value::Number(2.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
@@ -337,11 +337,11 @@ mod tests {
             let mut compiler = Compiler::new("8 - 3".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(8.0);
+            let constant = chunk.constants_mut().add(Value::Number(8.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(3.0);
+            let constant = chunk.constants_mut().add(Value::Number(3.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
@@ -356,11 +356,11 @@ mod tests {
             let mut compiler = Compiler::new("5 * 6".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(5.0);
+            let constant = chunk.constants_mut().add(Value::Number(5.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(6.0);
+            let constant = chunk.constants_mut().add(Value::Number(6.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
@@ -375,11 +375,11 @@ mod tests {
             let mut compiler = Compiler::new("28 / 4".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(28.0);
+            let constant = chunk.constants_mut().add(Value::Number(28.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(4.0);
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
@@ -395,25 +395,25 @@ mod tests {
             let mut compiler = Compiler::new("(-1 + 2) * 3 - -4".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(1.0);
+            let constant = chunk.constants_mut().add(Value::Number(1.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
             chunk.write(OpCode::Negate as u8, 1);
 
-            let constant = chunk.constants_mut().add(2.0);
+            let constant = chunk.constants_mut().add(Value::Number(2.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
             chunk.write(OpCode::Add as u8, 1);
 
-            let constant = chunk.constants_mut().add(3.0);
+            let constant = chunk.constants_mut().add(Value::Number(3.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
             chunk.write(OpCode::Multiply as u8, 1);
 
-            let constant = chunk.constants_mut().add(4.0);
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
@@ -431,11 +431,11 @@ mod tests {
             let mut compiler = Compiler::new("5\n*\n6".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(5.0);
+            let constant = chunk.constants_mut().add(Value::Number(5.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(6.0);
+            let constant = chunk.constants_mut().add(Value::Number(6.0));
             chunk.write(OpCode::Constant as u8, 3);
             chunk.write(constant as u8, 3);
 
@@ -453,15 +453,15 @@ mod tests {
             let mut compiler = Compiler::new("1 - 4 * 6".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(1.0);
+            let constant = chunk.constants_mut().add(Value::Number(1.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(4.0);
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(6.0);
+            let constant = chunk.constants_mut().add(Value::Number(6.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
@@ -478,17 +478,17 @@ mod tests {
             let mut compiler = Compiler::new("1 * 4 - 6".to_string());
             let mut chunk = Chunk::new();
 
-            let constant = chunk.constants_mut().add(1.0);
+            let constant = chunk.constants_mut().add(Value::Number(1.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
-            let constant = chunk.constants_mut().add(4.0);
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 
             chunk.write(OpCode::Multiply as u8, 1);
 
-            let constant = chunk.constants_mut().add(6.0);
+            let constant = chunk.constants_mut().add(Value::Number(6.0));
             chunk.write(OpCode::Constant as u8, 1);
             chunk.write(constant as u8, 1);
 

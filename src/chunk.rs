@@ -77,6 +77,8 @@ impl Chunk {
 
 #[cfg(test)]
 mod tests {
+    use crate::value::Value;
+
     use super::*;
 
     #[test]
@@ -133,8 +135,8 @@ mod tests {
         let mut value_array = ValueArray::new();
         assert_eq!(chunk.constants(), &value_array);
 
-        value_array.add(10.0);
-        chunk.constants_mut().add(10.0);
+        value_array.add(Value::Number(10.0));
+        chunk.constants_mut().add(Value::Number(10.0));
         assert_eq!(chunk.constants(), &value_array);
     }
 }
