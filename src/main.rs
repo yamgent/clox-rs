@@ -27,8 +27,6 @@ fn main() {
 }
 
 fn repl() {
-    let mut vm = VM::new();
-
     loop {
         print!("> ");
         io::stdout().flush().unwrap_or_else(|_| {
@@ -45,7 +43,7 @@ fn repl() {
             }
 
             // TODO: do we to handle the result here?
-            let _ = vm.interpret(buffer);
+            let _ = VM::interpret(buffer);
         } else {
             // EOF
             break;
@@ -54,8 +52,6 @@ fn repl() {
 }
 
 fn run_file<S: AsRef<str>>(path: S) {
-    let mut vm = VM::new();
-
     let source = match fs::read_to_string(path.as_ref()) {
         Ok(content) => content,
         Err(_) => {
@@ -64,7 +60,7 @@ fn run_file<S: AsRef<str>>(path: S) {
         }
     };
 
-    if let Err(error) = vm.interpret(source) {
+    if let Err(error) = VM::interpret(source) {
         match error {
             InterpretError::CompileError => {
                 process::exit(65);

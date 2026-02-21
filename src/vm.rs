@@ -20,24 +20,19 @@ pub enum InterpretError {
 }
 
 impl VM {
-    pub fn new() -> Self {
-        Self {
-            chunk: Chunk::new(),
-            ip: 0,
-            stack: vec![],
-        }
-    }
-
-    pub fn interpret(&mut self, source: String) -> Result<Option<Value>, InterpretError> {
+    pub fn interpret(source: String) -> Result<Option<Value>, InterpretError> {
         let mut compiler = Compiler::new(source);
         let chunk = compiler
             .compile()
             .map_err(|_| InterpretError::CompileError)?;
 
-        self.chunk = chunk;
-        self.ip = 0;
+        let mut vm = Self {
+            chunk,
+            ip: 0,
+            stack: vec![],
+        };
 
-        self.run()
+        vm.run()
     }
 
     fn pop_stack(&mut self) -> Value {
@@ -179,13 +174,11 @@ mod tests {
         // this whole test is just black-box testing
         //
         fn assert_error(source: &str, error: InterpretError) {
-            let mut vm = VM::new();
-            assert_eq!(vm.interpret(source.to_string()), Err(error));
+            assert_eq!(VM::interpret(source.to_string()), Err(error));
         }
 
         fn assert_success_with_value(source: &str, value: Value) {
-            let mut vm = VM::new();
-            assert_eq!(vm.interpret(source.to_string()), Ok(Some(value)));
+            assert_eq!(VM::interpret(source.to_string()), Ok(Some(value)));
         }
 
         // test error
