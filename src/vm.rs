@@ -196,6 +196,41 @@ mod tests {
             );
         }
 
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("!true".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("!false".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("!nil".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            // intentional: In lox, only `nil` and `false` are falsey, everything else is truthy
+            assert_eq!(vm.interpret("!0".to_string()), Ok(Some(Value::Bool(false))));
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(vm.interpret("!1".to_string()), Ok(Some(Value::Bool(false))));
+        }
+
         // test binary ops
         {
             let mut vm = VM::new();
@@ -229,12 +264,215 @@ mod tests {
             );
         }
 
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("2 > 3".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("3 > 3".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("4 > 3".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("2 >= 3".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("3 >= 3".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("4 >= 3".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("2 < 3".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("3 < 3".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("4 < 3".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("2 <= 3".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("3 <= 3".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("4 <= 3".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            // the book intentionally desugarize `a <= b` to `!(a > b)`. But this
+            // means that `NaN <= 1` will return true, but according to IEEE-754,
+            // this should be false. The book intentionally make this decision to
+            // make implementation simpler
+            assert_eq!(
+                vm.interpret("(0.0 / 0.0) <= 1".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            // the book intentionally desugarize `a >= b` to `!(a < b)`. But this
+            // means that `NaN >= 1` will return true, but according to IEEE-754,
+            // this should be false. The book intentionally make this decision to
+            // make implementation simpler
+            assert_eq!(
+                vm.interpret("(0.0 / 0.0) >= 1".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("2 == 2".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("2 != 2".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("3 == 2".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("3 != 2".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("true == 1".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("false == nil".to_string()),
+                Ok(Some(Value::Bool(false)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("nil == nil".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
         // test complex expressions
         {
             let mut vm = VM::new();
             assert_eq!(
                 vm.interpret("(-1 + 2) * 3 - -4".to_string()),
                 Ok(Some(Value::Number(7.0)))
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            assert_eq!(
+                vm.interpret("!(5 - 4 > 3 * 2 == !nil)".to_string()),
+                Ok(Some(Value::Bool(true)))
+            );
+        }
+
+        // test runtime errors
+        {
+            let mut vm = VM::new();
+            // negate does not work on booleans
+            assert_eq!(
+                vm.interpret("-false".to_string()),
+                Err(InterpretError::RuntimeError)
+            );
+        }
+
+        {
+            let mut vm = VM::new();
+            // arithmetic does not work on booleans
+            assert_eq!(
+                vm.interpret("true + false".to_string()),
+                Err(InterpretError::RuntimeError)
             );
         }
     }
