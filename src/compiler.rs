@@ -160,7 +160,7 @@ impl Compiler {
             TokenKind::Greater => {
                 self.emit_byte(chunk, OpCode::Greater as u8);
             }
-            // this desugaring means that "NaN <= 1" will be true, violating IEEE-754 where it
+            // this desugaring means that "NaN >= 1" will be true, violating IEEE-754 where it
             // should be false. this is done intentionally by the book to make implementation
             // simpler
             TokenKind::GreaterEqual => {
@@ -169,7 +169,7 @@ impl Compiler {
             TokenKind::Less => {
                 self.emit_byte(chunk, OpCode::Less as u8);
             }
-            // this desugaring means that "NaN >= 1" will be true, violating IEEE-754 where it
+            // this desugaring means that "NaN <= 1" will be true, violating IEEE-754 where it
             // should be false. this is done intentionally by the book to make implementation
             // simpler
             TokenKind::LessEqual => {
@@ -379,6 +379,17 @@ mod tests {
             assert_eq!(compiler.compile(), Ok(chunk));
         }
 
+        {
+            let mut compiler = Compiler::new("!true".to_string());
+            let mut chunk = Chunk::new();
+
+            chunk.write(OpCode::True as u8, 1);
+            chunk.write(OpCode::Not as u8, 1);
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
         // test binary ops
         {
             let mut compiler = Compiler::new("1 + 2".to_string());
@@ -450,6 +461,121 @@ mod tests {
             chunk.write(constant as u8, 1);
 
             chunk.write(OpCode::Divide as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("true == nil".to_string());
+            let mut chunk = Chunk::new();
+
+            chunk.write(OpCode::True as u8, 1);
+
+            chunk.write(OpCode::Nil as u8, 1);
+
+            chunk.write(OpCode::Equal as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("false != nil".to_string());
+            let mut chunk = Chunk::new();
+
+            chunk.write(OpCode::False as u8, 1);
+
+            chunk.write(OpCode::Nil as u8, 1);
+
+            chunk.write(OpCode::Equal as u8, 1);
+            chunk.write(OpCode::Not as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("3 > 4".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(Value::Number(3.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Greater as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("3 >= 4".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(Value::Number(3.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            // this desugaring means that "NaN >= 1" will be true, violating IEEE-754 where it
+            // should be false. this is done intentionally by the book to make implementation
+            // simpler
+            chunk.write(OpCode::Less as u8, 1);
+            chunk.write(OpCode::Not as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("3 < 4".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(Value::Number(3.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            chunk.write(OpCode::Less as u8, 1);
+
+            chunk.write(OpCode::Return as u8, 1);
+
+            assert_eq!(compiler.compile(), Ok(chunk));
+        }
+
+        {
+            let mut compiler = Compiler::new("3 <= 4".to_string());
+            let mut chunk = Chunk::new();
+
+            let constant = chunk.constants_mut().add(Value::Number(3.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            let constant = chunk.constants_mut().add(Value::Number(4.0));
+            chunk.write(OpCode::Constant as u8, 1);
+            chunk.write(constant as u8, 1);
+
+            // this desugaring means that "NaN <= 1" will be true, violating IEEE-754 where it
+            // should be false. this is done intentionally by the book to make implementation
+            // simpler
+            chunk.write(OpCode::Greater as u8, 1);
+            chunk.write(OpCode::Not as u8, 1);
 
             chunk.write(OpCode::Return as u8, 1);
 
